@@ -1,0 +1,185 @@
+<!doctype html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</title>
+
+    <!-- External SDKs / Libs -->
+    <script src="/_sdk/data_sdk.js"></script>
+    <script src="/_sdk/element_sdk.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
+
+    <!-- App styles -->
+    <link rel="stylesheet" href="styles.css">
+    <style>@view-transition { navigation: auto; }</style>
+  </head>
+  <body>
+    <div id="loginContainer" class="login-container">
+      <div class="login-box">
+        <div class="login-header">
+          <h1 id="systemTitle">ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</h1>
+          <p id="institutionName">โรงเรียน/มหาวิทยาลัย</p>
+        </div>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="email">อีเมล</label>
+            <input type="email" id="email" required>
+          </div>
+          <div class="form-group">
+            <label for="password">รหัสผ่าน</label>
+            <input type="password" id="password" required>
+          </div>
+          <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
+        </form>
+        <button id="guestBtn" class="btn-guest">เข้าชมในฐานะผู้ใช้งานทั่วไป</button>
+      </div>
+    </div>
+
+    <div id="dashboard" class="dashboard">
+      <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">เมนู</span>
+          <button id="toggleSidebar" class="toggle-btn">☰</button>
+        </div>
+        <div class="sidebar-menu" id="sidebarMenu"></div>
+      </div>
+
+      <div class="main-content">
+        <div class="top-bar">
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-details">
+              <h3 id="userName">ผู้ใช้งาน</h3>
+              <p id="userPosition">ตำแหน่ง</p>
+            </div>
+          </div>
+          <button id="logoutBtn" class="btn-logout">ออกจากระบบ</button>
+        </div>
+
+        <div class="content-area">
+          <div id="homePage" class="page-section active">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">ภาพรวมระบบ</h2>
+                <select id="yearSelector" class="year-selector">
+                  <option value="2567">ปีการศึกษา 2567</option>
+                  <option value="2568">ปีการศึกษา 2568</option>
+                </select>
+              </div>
+            </div>
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">ตารางข้อมูลการส่งเอกสาร</h2>
+                <button id="addCourseBtn" class="btn-primary" style="display: none;">+ เพิ่มรายวิชา</button>
+              </div>
+              <div class="table-container">
+                <table id="courseTable">
+                  <thead>
+                    <tr>
+                      <th>ชื่อรายวิชา</th>
+                      <th>อาจารย์ผู้ประสานงาน</th>
+                      <th>ชั้นปี</th>
+                      <th>ห้อง</th>
+                      <th>ภาคการศึกษา</th>
+                      <th>สถานะการส่ง</th>
+                      <th>ไฟล์ PDF</th>
+                      <th id="actionHeader" style="display: none;">จัดการ</th>
+                      <th>สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="courseTableBody"></tbody>
+                </table>
+              </div>
+              <div class="pagination" id="pagination"></div>
+            </div>
+          </div>
+
+          <div id="usersPage" class="page-section">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">จัดการผู้ใช้งาน</h2>
+                <button id="addUserBtn" class="btn-primary">+ เพิ่มผู้ใช้งาน</button>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>อีเมล</th>
+                      <th>ชื่อ-สกุล</th>
+                      <th>ตำแหน่ง</th>
+                      <th>สถานะ</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usersTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="coursesPage" class="page-section">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">จัดการรายวิชา</h2>
+                <button id="addCourseManageBtn" class="btn-primary">+ เพิ่มรายวิชา</button>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อรายวิชา</th>
+                      <th>อาจารย์ผู้ประสานงาน</th>
+                      <th>ชั้นปี</th>
+                      <th>ห้อง</th>
+                      <th>ภาคการศึกษา</th>
+                      <th>กำหนดส่ง</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="coursesTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+
+          <div id="coordinatorsPage" class="page-section">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">จัดการรายชื่ออาจารย์ผู้ประสานงาน</h2>
+                <button id="addCoordinatorBtn" class="btn-primary">+ เพิ่มอาจารย์</button>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อ-สกุล</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="coordinatorsTableBody"></tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modalTitle">เพิ่มข้อมูล</h2>
+          <button class="btn-close" id="closeModal">×</button>
+        </div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <!-- App script -->
+    <script src="app.js"></script>
+  </body>
+</html>
