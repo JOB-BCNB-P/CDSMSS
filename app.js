@@ -1,50 +1,50 @@
-// === Apps Script adapter for window.dataSdk (works with google.script.run) ===
+/* ===== Config: Google Apps Script Web App endpoint ===== */
+window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/macros/s/AKfycbzPq1Bkg1-OTK1mnoWNgO1jRu8OZ-0FFYYL7iRQWmPYZH5EE0o-k6PBFK8xVArm_mBvZA/exec";
+
+/* ===== dataSdk (fetch mode for GitHub Pages) ===== */
 (function () {
-  if (typeof google !== 'undefined' && google.script && google.script.run) {
-    // If running in Apps Script web app, wire up adapter
-    if (window.dataSdk && window.dataSdk.__wired) return;
-    const state = { handler: null };
+  if (window.dataSdk && window.dataSdk.__wired) return;
 
-    function refresh() {
-      google.script.run
-        .withSuccessHandler(function (data) {
-          if (state.handler && typeof state.handler.onDataChanged === 'function') {
-            state.handler.onDataChanged(data || []);
-          }
-        })
-        .getAllData();
+  async function refresh(handler) {
+    const res = await fetch(`${window.__GAS_ENDPOINT__}?action=getAllData`, {
+      method: "GET",
+      headers: { "Accept": "application/json" },
+      credentials: "omit"
+    });
+    const data = await res.json();
+    if (handler && typeof handler.onDataChanged === "function") {
+      handler.onDataChanged(Array.isArray(data) ? data : []);
     }
-
-    window.dataSdk = window.dataSdk || {
-      __wired: true,
-      async init(handler) {
-        state.handler = handler || null;
-        refresh();
-        return { isOk: true };
-      },
-      async create(obj) {
-        return new Promise(function (resolve) {
-          google.script.run
-            .withSuccessHandler(function (res) { refresh(); resolve({ isOk: res && res.success }); })
-            .createRecord(obj);
-        });
-      },
-      async update(obj) {
-        return new Promise(function (resolve) {
-          google.script.run
-            .withSuccessHandler(function (res) { refresh(); resolve({ isOk: res && res.success }); })
-            .updateRecord(obj);
-        });
-      },
-      async delete(obj) {
-        return new Promise(function (resolve) {
-          google.script.run
-            .withSuccessHandler(function (res) { refresh(); resolve({ isOk: res && res.success }); })
-            .deleteRecord(obj);
-        });
-      }
-    };
   }
+
+  async function postJSON(action, payload) {
+    const res = await fetch(window.__GAS_ENDPOINT__, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ action, data: payload })
+    });
+    return res.json();
+  }
+
+  window.dataSdk = {
+    __wired: true,
+    async init(handler) {
+      await refresh(handler);
+      return { isOk: true };
+    },
+    async create(obj) {
+      const r = await postJSON("createRecord", obj);
+      return { isOk: !!(r && r.success) };
+    },
+    async update(obj) {
+      const r = await postJSON("updateRecord", obj);
+      return { isOk: !!(r && r.success) };
+    },
+    async delete(obj) {
+      const r = await postJSON("deleteRecord", obj);
+      return { isOk: !!(r && r.success) };
+    }
+  };
 })();
 
 // === App code (migrated from inline script) ===
