@@ -1,5 +1,3 @@
-// ====== CONFIG (External API) ======
-const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPq1Bkg1-OTK1mnoWNgO1jRu8OZ-0FFYYL7iRQWmPYZH5EE0o-k6PBFK8xVArm_mBvZA/exec";
 // === Apps Script adapter for window.dataSdk (works with google.script.run) ===
 (function () {
   if (typeof google !== 'undefined' && google.script && google.script.run) {
@@ -17,7 +15,7 @@ const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzPq1Bkg1-OTK1mnoWNg
         .getAllData();
     }
 
-    window.dataSdk = {
+    window.dataSdk = window.dataSdk || {
       __wired: true,
       async init(handler) {
         state.handler = handler || null;
