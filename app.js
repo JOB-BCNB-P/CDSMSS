@@ -1,4 +1,3 @@
-
 /* ===== Config: Google Apps Script Web App endpoint ===== */
 window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/macros/s/AKfycbzPq1Bkg1-OTK1mnoWNgO1jRu8OZ-0FFYYL7iRQWmPYZH5EE0o-k6PBFK8xVArm_mBvZA/exec";
 
@@ -48,6 +47,7 @@ window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/
   };
 })();
 
+(function(){ if(window.__APP_ALREADY_INIT__) return; window.__APP_ALREADY_INIT__=true;
 // === App code (migrated from inline script) ===
 const defaultConfig = {
   system_title: "ระบบกำกับติดตามการส่งรายละเอียดรายวิชา",
@@ -58,8 +58,7 @@ const defaultConfig = {
   text_color: "#333333",
   accent_color: "#ff4757"
 };
-// ด้านบนไฟล์
-let dataReady = false;
+
 let allData = [];
 let currentUser = null;
 let isAdmin = false;
@@ -74,22 +73,7 @@ const dataHandler = {
     }
   }
 };
-// หลัง init() สำเร็จ ให้ set dataReady = true เมื่อ onDataChanged ทำงาน
-const dataHandler = {
-  onDataChanged(data) {
-    allData = data;
-    dataReady = true;
-    if (currentUser) renderDashboard();
-  }
-};
 
-// ใน handleLogin ก่อนอ่าน users:
-async function handleLogin(e) {
-  e.preventDefault();
-  if (!dataReady) {
-    Swal.fire({ icon: 'info', title: 'กำลังโหลดข้อมูล', text: 'โปรดลองใหม่อีกครั้งในไม่กี่วินาที' });
-    return;
-  }
 async function initApp() {
   // If external dataSdk exists (local dev), use it. Otherwise use adapter above.
   if (!window.dataSdk || typeof window.dataSdk.init !== 'function') {
@@ -934,3 +918,4 @@ window.onclick = function(event) {
 
 // boot
 document.addEventListener('DOMContentLoaded', initApp);
+})();
