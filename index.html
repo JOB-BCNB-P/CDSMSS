@@ -1,278 +1,183 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="th">
-<head>
-  <meta charset="UTF-8" />
-  <title>ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</title>
 
-  <!-- CSS หลักของปอย -->
-  <link rel="stylesheet" href="./styles.css" />
+    <!-- External SDKs / Libs -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://cdn.tailwindcss.com" type="text/javascript"></script>
 
-  <!-- Tailwind (ใช้สำหรับ layout เบา ๆ ถ้าปอยไม่ใช้ก็ลบได้) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <!-- SweetAlert2 -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-</head>
-<body class="bg-slate-100">
-
-  <!-- Login Container -->
-  <div id="loginContainer" class="login-container flex items-center justify-center min-h-screen">
-    <div class="login-card bg-white shadow-xl rounded-xl p-8 max-w-md w-full">
-      <h1 class="text-2xl font-bold text-center mb-1">ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</h1>
-      <p class="text-center text-sm text-gray-500 mb-6">เข้าสู่ระบบเพื่อจัดการข้อมูลรายวิชา</p>
-
-      <form id="loginForm" class="space-y-4">
-        <div>
-          <label for="email" class="block text-sm font-medium text-gray-700 mb-1">อีเมล</label>
-          <input
-            id="email"
-            type="email"
-            required
-            class="w-full border rounded-lg px-3 py-2 text-sm"
-            placeholder="example@school.ac.th"
-          />
+    <!-- App styles -->
+    <link rel="stylesheet" href="styles.css">
+    <style>@view-transition { navigation: auto; }</style>
+  </head>
+  <body>
+    <div id="loginContainer" class="login-container">
+      <div class="login-box">
+        <div class="login-header">
+          <h1 id="systemTitle">ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</h1>
+          <p id="institutionName">โรงเรียน/มหาวิทยาลัย</p>
         </div>
-
-        <div>
-          <label for="password" class="block text-sm font-medium text-gray-700 mb-1">รหัสผ่าน</label>
-          <input
-            id="password"
-            type="password"
-            required
-            class="w-full border rounded-lg px-3 py-2 text-sm"
-            placeholder="กรอกรหัสผ่าน"
-          />
-        </div>
-
-        <button
-          type="submit"
-          class="w-full bg-indigo-600 text-white py-2 rounded-lg font-medium hover:bg-indigo-700 transition"
-        >
-          เข้าสู่ระบบ
-        </button>
-      </form>
-
-      <div class="mt-4 text-center">
-        <button
-          id="guestBtn"
-          class="text-xs text-gray-500 hover:text-gray-700 underline"
-        >
-          เข้าชมในฐานะผู้ใช้งานทั่วไป
-        </button>
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="email">อีเมล</label>
+            <input type="email" id="email" required>
+          </div>
+          <div class="form-group">
+            <label for="password">รหัสผ่าน</label>
+            <input type="password" id="password" required>
+          </div>
+          <button type="submit" class="btn-login">เข้าสู่ระบบ</button>
+        </form>
+        <button id="guestBtn" class="btn-guest">เข้าชมในฐานะผู้ใช้งานทั่วไป</button>
       </div>
     </div>
-  </div>
 
-  <!-- Dashboard -->
-  <div id="dashboard" class="dashboard hidden min-h-screen">
-    <!-- Top bar -->
-    <header class="topbar bg-white shadow-sm px-4 py-3 flex items-center justify-between">
-      <div>
-        <h1 id="systemTitle" class="font-semibold text-lg">
-          ระบบกำกับติดตามการส่งรายละเอียดรายวิชา
-        </h1>
-        <p id="institutionName" class="text-xs text-gray-500">หน่วยงานของท่าน</p>
-      </div>
-      <div class="flex items-center gap-3">
-        <div class="text-right">
-          <div id="userName" class="text-sm font-medium">-</div>
-          <div id="userPosition" class="text-xs text-gray-500">-</div>
+    <div id="dashboard" class="dashboard">
+      <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <span class="sidebar-title">เมนู</span>
+          <button id="toggleSidebar" class="toggle-btn">☰</button>
         </div>
-        <div
-          id="userAvatar"
-          class="w-9 h-9 rounded-full bg-indigo-500 text-white flex items-center justify-center text-sm font-semibold"
-        >
-          ?
-        </div>
-        <button
-          id="logoutBtn"
-          class="ml-3 text-xs bg-red-500 text-white px-3 py-1 rounded-full hover:bg-red-600"
-        >
-          ออกจากระบบ
-        </button>
+        <div class="sidebar-menu" id="sidebarMenu"></div>
       </div>
-    </header>
 
-    <div class="flex">
-      <!-- Sidebar -->
-      <aside id="sidebar" class="sidebar w-60 bg-white border-r min-h-screen">
-        <div class="p-4 border-b flex items-center justify-between">
-          <span class="font-semibold text-sm">เมนู</span>
-          <button
-            id="toggleSidebar"
-            class="text-xs px-2 py-1 border rounded-md hover:bg-gray-50"
-          >
-            ☰
-          </button>
+      <div class="main-content">
+        <div class="top-bar">
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-details">
+              <h3 id="userName">ผู้ใช้งาน</h3>
+              <p id="userPosition">ตำแหน่ง</p>
+            </div>
+          </div>
+          <button id="logoutBtn" class="btn-logout">ออกจากระบบ</button>
         </div>
-        <nav id="sidebarMenu" class="p-2 space-y-1 text-sm">
-          <!-- จะถูกสร้างจาก app.js -->
-        </nav>
-      </aside>
 
-      <!-- Main Content -->
-      <main class="flex-1 p-4 space-y-4">
-        <!-- Overview -->
-        <section id="homePage" class="page-section active">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-lg font-semibold">ภาพรวมระบบ</h2>
-            <div class="flex items-center gap-2 text-sm">
-              <span>ปีการศึกษา:</span>
-              <select id="yearSelector" class="year-selector border rounded-md px-2 py-1 text-sm">
-                <!-- จะถูกเติมจาก app.js -->
-                <option value="">-- ยังไม่มีข้อมูลปีการศึกษา --</option>
-              </select>
+        <div class="content-area">
+          <div id="homePage" class="page-section active">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">ภาพรวมระบบ</h2>
+                <select id="yearSelector" class="year-selector">
+                  <option value="2567">ปีการศึกษา 2567</option>
+                  <option value="2568">ปีการศึกษา 2568</option>
+                </select>
+              </div>
+            </div>
+            <div class="stats-grid" id="statsGrid"></div>
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">ตารางข้อมูลการส่งเอกสาร</h2>
+                <button id="addCourseBtn" class="btn-primary" style="display: none;">+ เพิ่มรายวิชา</button>
+              </div>
+              <div class="table-container">
+                <table id="courseTable">
+                  <thead>
+                    <tr>
+                      <th>ชื่อรายวิชา</th>
+                      <th>อาจารย์ผู้ประสานงาน</th>
+                      <th>ชั้นปี</th>
+                      <th>ห้อง</th>
+                      <th>ภาคการศึกษา</th>
+                      <th>สถานะการส่ง</th>
+                      <th>ไฟล์ PDF</th>
+                      <th id="actionHeader" style="display: none;">จัดการ</th>
+                      <th>สถานะ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="courseTableBody"></tbody>
+                </table>
+              </div>
+              <div class="pagination" id="pagination"></div>
             </div>
           </div>
 
-          <!-- Stats -->
-          <div id="statsGrid" class="grid grid-cols-1 md:grid-cols-4 gap-3">
-            <!-- จะสร้างจาก app.js -->
+          <div id="usersPage" class="page-section">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">จัดการผู้ใช้งาน</h2>
+                <button id="addUserBtn" class="btn-primary">+ เพิ่มผู้ใช้งาน</button>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>อีเมล</th>
+                      <th>ชื่อ-สกุล</th>
+                      <th>ตำแหน่ง</th>
+                      <th>สถานะ</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="usersTableBody"></tbody>
+                </table>
+              </div>
+            </div>
           </div>
 
-          <!-- Course table -->
-          <div class="mt-4 bg-white rounded-xl shadow-sm p-3">
-            <div class="flex items-center justify-between mb-2">
-              <h3 class="font-semibold text-sm">ตารางติดตามการส่งรายละเอียดรายวิชา</h3>
-            </div>
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 border-b">
-                    <th class="px-2 py-1 text-left">รายวิชา</th>
-                    <th class="px-2 py-1 text-left">ผู้รับผิดชอบ</th>
-                    <th class="px-2 py-1 text-center">ชั้นปี</th>
-                    <th class="px-2 py-1 text-center">ห้อง</th>
-                    <th class="px-2 py-1 text-center">เทอม</th>
-                    <th class="px-2 py-1 text-left">สถานะ</th>
-                    <th class="px-2 py-1 text-center">ไฟล์</th>
-                    <th id="actionHeader" class="px-2 py-1 text-center">จัดการ</th>
-                    <th class="px-2 py-1 text-center">สถานะกำหนดส่ง</th>
-                  </tr>
-                </thead>
-                <tbody id="courseTableBody">
-                  <!-- จะเติมจาก app.js -->
-                </tbody>
-              </table>
-            </div>
-            <div id="pagination" class="mt-2 flex justify-center gap-1 text-xs">
-              <!-- ปุ่มเปลี่ยนหน้า -->
+          <div id="coursesPage" class="page-section">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">จัดการรายวิชา</h2>
+                <button id="addCourseManageBtn" class="btn-primary">+ เพิ่มรายวิชา</button>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อรายวิชา</th>
+                      <th>อาจารย์ผู้ประสานงาน</th>
+                      <th>ชั้นปี</th>
+                      <th>ห้อง</th>
+                      <th>ภาคการศึกษา</th>
+                      <th>กำหนดส่ง</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="coursesTableBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </section>
 
-        <!-- Users Management -->
-        <section id="usersPage" class="page-section hidden">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-lg font-semibold">จัดการผู้ใช้งาน</h2>
-            <button
-              id="addUserBtn"
-              class="text-xs bg-indigo-500 text-white px-3 py-1 rounded-full hover:bg-indigo-600"
-            >
-              + เพิ่มผู้ใช้งาน
-            </button>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm p-3 text-xs">
-            <div class="overflow-x-auto">
-              <table class="w-full border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 border-b">
-                    <th class="px-2 py-1 text-left">ชื่อ-สกุล</th>
-                    <th class="px-2 py-1 text-left">อีเมล</th>
-                    <th class="px-2 py-1 text-left">ตำแหน่ง</th>
-                    <th class="px-2 py-1 text-center">สถานะ</th>
-                    <th class="px-2 py-1 text-center">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="usersTableBody">
-                  <!-- เติมจาก app.js -->
-                </tbody>
-              </table>
+          <div id="coordinatorsPage" class="page-section">
+            <div class="card">
+              <div class="card-header">
+                <h2 class="card-title">จัดการรายชื่ออาจารย์ผู้ประสานงาน</h2>
+                <button id="addCoordinatorBtn" class="btn-primary">+ เพิ่มอาจารย์</button>
+              </div>
+              <div class="table-container">
+                <table>
+                  <thead>
+                    <tr>
+                      <th>ชื่อ-สกุล</th>
+                      <th>จัดการ</th>
+                    </tr>
+                  </thead>
+                  <tbody id="coordinatorsTableBody"></tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </section>
-
-        <!-- Courses Management -->
-        <section id="coursesPage" class="page-section hidden">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-lg font-semibold">จัดการรายวิชา (แม่แบบ)</h2>
-            <button
-              id="addCourseManageBtn"
-              class="text-xs bg-indigo-500 text-white px-3 py-1 rounded-full hover:bg-indigo-600"
-            >
-              + เพิ่มรายวิชา
-            </button>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm p-3 text-xs">
-            <div class="overflow-x-auto">
-              <table class="w-full border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 border-b">
-                    <th class="px-2 py-1 text-left">รายวิชา</th>
-                    <th class="px-2 py-1 text-left">ผู้รับผิดชอบ</th>
-                    <th class="px-2 py-1 text-center">ชั้นปี</th>
-                    <th class="px-2 py-1 text-center">ห้อง</th>
-                    <th class="px-2 py-1 text-center">เทอม</th>
-                    <th class="px-2 py-1 text-center">กำหนดส่ง</th>
-                    <th class="px-2 py-1 text-center">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="coursesTableBody">
-                  <!-- เติมจาก app.js -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-
-        <!-- Coordinators Management -->
-        <section id="coordinatorsPage" class="page-section hidden">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-lg font-semibold">จัดการอาจารย์ผู้รับผิดชอบรายวิชา</h2>
-            <button
-              id="addCoordinatorBtn"
-              class="text-xs bg-indigo-500 text-white px-3 py-1 rounded-full hover:bg-indigo-600"
-            >
-              + เพิ่มอาจารย์
-            </button>
-          </div>
-          <div class="bg-white rounded-xl shadow-sm p-3 text-xs">
-            <div class="overflow-x-auto">
-              <table class="w-full border-collapse">
-                <thead>
-                  <tr class="bg-slate-50 border-b">
-                    <th class="px-2 py-1 text-left">ชื่ออาจารย์</th>
-                    <th class="px-2 py-1 text-center">จัดการ</th>
-                  </tr>
-                </thead>
-                <tbody id="coordinatorsTableBody">
-                  <!-- เติมจาก app.js -->
-                </tbody>
-              </table>
-            </div>
-          </div>
-        </section>
-      </main>
-    </div>
-  </div>
-
-  <!-- Modal (ใช้ร่วมกัน) -->
-  <div id="modal" class="modal hidden">
-    <div class="modal-content bg-white rounded-xl shadow-xl p-4 max-w-lg w-full">
-      <div class="flex justify-between items-center mb-2">
-        <h3 id="modalTitle" class="font-semibold text-sm">Modal</h3>
-        <button id="closeModal" class="text-xs px-2 py-1 border rounded-md">
-          ✕
-        </button>
-      </div>
-      <div id="modalBody" class="text-xs">
-        <!-- เนื้อหาแบบฟอร์มจะถูกเติมจาก app.js -->
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- App script -->
-  <script src="./app.js"></script>
+    <div id="modal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h2 class="modal-title" id="modalTitle">เพิ่มข้อมูล</h2>
+          <button class="btn-close" id="closeModal">×</button>
+        </div>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+    <!-- App script -->
+    <script src="./app.js"></script>
 </body>
 </html>
