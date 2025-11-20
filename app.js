@@ -160,7 +160,11 @@ async function handleLogin(e) {
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   const users = allData.filter(item => item.type === 'user');
-  const user = users.find(u => u.email === email && u.password === password && u.active);
+  const user = users.find(u =>
+  u.email?.trim().toLowerCase() === email.trim().toLowerCase() &&
+  u.password?.trim() === password.trim() &&
+  String(u.active).toLowerCase() === 'true'
+);
 
   if (user) {
     currentUser = user;
