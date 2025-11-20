@@ -59,22 +59,52 @@ window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/
  ***********************/
 const defaultConfig = {
   system_title: "ระบบกำกับติดตามการส่งรายละเอียดรายวิชา",
-  institution_name: "โรงเรียน/มหาวิทยาลัย",
-  primary_color: "#667eea",
-  secondary_color: "#764ba2",
-  background_color: "#f5f7fa",
-  text_color: "#333333",
-  accent_color: "#ff4757"
+  institution_name: "หน่วยงานของท่าน"
 };
 
+let dataReady = false;
 let allData = [];
 let currentUser = null;
 let isAdmin = false;
 let currentPage = 1;
 const itemsPerPage = 5;
 
-// ใช้ป้องกันกรณี init ซ้ำ
-window.__APP_ALREADY_INIT__ = window.__APP_ALREADY_INIT__ || false;
+/***********************
+ * สร้างรายการปีการศึกษา จากข้อมูลจริง
+ ***********************/
+function populateYearSelector() {
+  const yearSelect = document.getElementById("yearSelector");
+  if (!yearSelect) return;
+
+  const courseItems = (allData || []).filter(
+    (item) => item.type === "course" && item.academic_year
+  );
+
+  const years = Array.from(
+    new Set(
+      courseItems
+        .map((c) => String(c.academic_year).trim())
+        .filter((y) => y !== "")
+    )
+  );
+
+  years.sort((a, b) => Number(b) - Number(a));
+
+  if (years.length === 0) {
+    yearSelect.innerHTML =
+      '<option value="">-- ยังไม่มีข้อมูลปีการศึกษา --</option>';
+    return;
+  }
+
+  yearSelect.innerHTML = years
+    .map((y) => `<option value="${y}">ปีการศึกษา ${y}</option>`)
+    .join("");
+
+  yearSelect.value = years[0];
+
+  renderStats();
+  renderCourseTable();
+}
 
 /***********************
  * DATA HANDLER
@@ -82,6 +112,10 @@ window.__APP_ALREADY_INIT__ = window.__APP_ALREADY_INIT__ || false;
 const dataHandler = {
   onDataChanged(data) {
     allData = data || [];
+    dataReady = true;
+
+    populateYearSelector();
+
     if (currentUser) {
       renderDashboard();
     }
@@ -92,37 +126,14 @@ const dataHandler = {
  * INIT APP
  ***********************/
 async function initApp() {
-  if (window.__APP_ALREADY_INIT__) return;
-  window.__APP_ALREADY_INIT__ = true;
-
-  if (!window.dataSdk || typeof window.dataSdk.init !== "function") {
-    console.error("dataSdk not available");
-    return;
-  }
-
-  await window.dataSdk.init(dataHandler);
-
-  // elementSdk (ถ้ามี)
-  if (window.elementSdk) {
-    window.elementSdk.init({
-      defaultConfig,
-      onConfigChange: (config) => {
-        document.getElementById("systemTitle").textContent =
-          config.system_title || defaultConfig.system_title;
-        document.getElementById("institutionName").textContent =
-          config.institution_name || defaultConfig.institution_name;
-      },
-      mapToCapabilities: (config) => ({
-        recolorables: [],
-        borderables: [],
-        fontEditable: undefined,
-        fontSizeable: undefined
-      }),
-      mapToEditPanelValues: (config) =>
-        new Map([
-          ["system_title", config.system_title || defaultConfig.system_title],
-          ["institution_name", config.institution_name || defaultConfig.institution_name]
-        ])
+  try {
+    await window.dataSdk.init(dataHandler);
+  } catch (err) {
+    console.error("init error", err);
+    Swal.fire({
+      icon: "error",
+      title: "เชื่อมต่อข้อมูลไม่สำเร็จ",
+      text: "กรุณาตรวจสอบการตั้งค่า Web App (Code.gs) และลองใหม่อีกครั้ง"
     });
   }
 
@@ -149,28 +160,30 @@ function setupEventListeners() {
   if (closeModalBtn) closeModalBtn.addEventListener("click", closeModal);
 
   const yearSelector = document.getElementById("yearSelector");
-  if (yearSelector) yearSelector.addEventListener("change", renderDashboard);
-
-  const addCourseBtn = document.getElementById("addCourseBtn");
-  if (addCourseBtn) addCourseBtn.addEventListener("click", () => openCourseModal());
+  if (yearSelector) yearSelector.addEventListener("change", () => {
+    renderStats();
+    renderCourseTable();
+  });
 
   const addUserBtn = document.getElementById("addUserBtn");
-  if (addUserBtn) addUserBtn.addEventListener("click", () => openUserModal());
+  if (addUserBtn) addUserBtn.addEventListener("click", () => {
+    Swal.fire("ยังไม่ได้เปิดใช้", "ส่วนเพิ่มผู้ใช้งานจะเชื่อมต่อภายหลัง", "info");
+  });
 
   const addCourseManageBtn = document.getElementById("addCourseManageBtn");
-  if (addCourseManageBtn)
-    addCourseManageBtn.addEventListener("click", () => openCourseManageModal());
+  if (addCourseManageBtn) addCourseManageBtn.addEventListener("click", () => {
+    Swal.fire("ยังไม่ได้เปิดใช้", "ส่วนเพิ่มรายวิชาแม่แบบจะเชื่อมต่อภายหลัง", "info");
+  });
 
   const addCoordinatorBtn = document.getElementById("addCoordinatorBtn");
-  if (addCoordinatorBtn)
-    addCoordinatorBtn.addEventListener("click", () => openCoordinatorModal());
+  if (addCoordinatorBtn) addCoordinatorBtn.addEventListener("click", () => {
+    Swal.fire("ยังไม่ได้เปิดใช้", "ส่วนเพิ่มอาจารย์จะเชื่อมต่อภายหลัง", "info");
+  });
 }
 
 /***********************
  * LOGIN / LOGOUT
  ***********************/
-
-// *** ฟังก์ชันนี้คือจุดที่แก้หลัก ๆ ***
 async function handleLogin(e) {
   e.preventDefault();
 
@@ -180,6 +193,15 @@ async function handleLogin(e) {
   const email = rawEmail.trim();
   const password = rawPassword.trim();
 
+  if (!dataReady) {
+    Swal.fire({
+      icon: "info",
+      title: "กำลังโหลดข้อมูล",
+      text: "กรุณาลองใหม่อีกครั้งในไม่กี่วินาที"
+    });
+    return;
+  }
+
   Swal.fire({
     title: "กำลังเข้าสู่ระบบ...",
     allowOutsideClick: false,
@@ -188,7 +210,7 @@ async function handleLogin(e) {
     }
   });
 
-  await new Promise((resolve) => setTimeout(resolve, 500));
+  await new Promise((resolve) => setTimeout(resolve, 400));
 
   const users = allData.filter((item) => item.type === "user");
 
@@ -196,11 +218,12 @@ async function handleLogin(e) {
     const uEmail = (u.email || "").trim().toLowerCase();
     const uPass = String(u.password || "").trim();
 
-    const active = (u.active === true) ||
-      (u.active === "TRUE") ||
-      (u.active === "true") ||
-      (u.active === 1) ||
-      (u.active === "1");
+    const active =
+      u.active === true ||
+      u.active === "TRUE" ||
+      u.active === "true" ||
+      u.active === 1 ||
+      u.active === "1";
 
     return uEmail === email.toLowerCase() && uPass === password && active;
   });
@@ -218,15 +241,15 @@ async function handleLogin(e) {
     });
 
     setTimeout(() => {
-      document.getElementById("loginContainer").style.display = "none";
-      document.getElementById("dashboard").classList.add("active");
+      document.getElementById("loginContainer").classList.add("hidden");
+      document.getElementById("dashboard").classList.remove("hidden");
       renderDashboard();
     }, 1200);
   } else {
     Swal.fire({
       icon: "error",
       title: "เข้าสู่ระบบไม่สำเร็จ",
-      text: "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
+      text: "อีเมลหรือรหัสผ่านไม่ถูกต้อง หรือผู้ใช้งานยังไม่เปิดใช้งาน"
     });
   }
 }
@@ -235,8 +258,8 @@ function handleGuestLogin() {
   currentUser = { full_name: "ผู้ใช้งานทั่วไป", position: "ผู้ใช้งาน" };
   isAdmin = false;
 
-  document.getElementById("loginContainer").style.display = "none";
-  document.getElementById("dashboard").classList.add("active");
+  document.getElementById("loginContainer").classList.add("hidden");
+  document.getElementById("dashboard").classList.remove("hidden");
   renderDashboard();
 }
 
@@ -247,15 +270,15 @@ function handleLogout() {
     showCancelButton: true,
     confirmButtonText: "ออกจากระบบ",
     cancelButtonText: "ยกเลิก",
-    confirmButtonColor: "#ff4757"
+    confirmButtonColor: "#ef4444"
   }).then((result) => {
     if (result.isConfirmed) {
       currentUser = null;
       isAdmin = false;
       currentPage = 1;
 
-      document.getElementById("dashboard").classList.remove("active");
-      document.getElementById("loginContainer").style.display = "flex";
+      document.getElementById("dashboard").classList.add("hidden");
+      document.getElementById("loginContainer").classList.remove("hidden");
       document.getElementById("loginForm").reset();
     }
   });
@@ -271,15 +294,18 @@ function toggleSidebar() {
 function renderDashboard() {
   if (!currentUser) return;
 
-  document.getElementById("userName").textContent = currentUser.full_name || "";
-  document.getElementById("userPosition").textContent = currentUser.position || "";
-  document.getElementById("userAvatar").textContent =
+  const userNameEl = document.getElementById("userName");
+  const userPositionEl = document.getElementById("userPosition");
+  const userAvatarEl = document.getElementById("userAvatar");
+
+  if (userNameEl) userNameEl.textContent = currentUser.full_name || "";
+  if (userPositionEl) userPositionEl.textContent = currentUser.position || "";
+  if (userAvatarEl) userAvatarEl.textContent =
     (currentUser.full_name || "?").charAt(0);
 
   renderSidebar();
   renderStats();
   renderCourseTable();
-
   if (isAdmin) {
     renderUsersTable();
     renderCoursesTable();
@@ -291,37 +317,37 @@ function renderSidebar() {
   const menu = document.getElementById("sidebarMenu");
   if (!menu) return;
 
-  const menuItems = [{ id: "homePage", icon: "🏠", label: "หน้าหลัก" }];
+  const items = [{ id: "homePage", icon: "🏠", label: "หน้าหลัก" }];
 
   if (isAdmin) {
-    menuItems.push(
+    items.push(
       { id: "usersPage", icon: "👥", label: "จัดการผู้ใช้งาน" },
       { id: "coursesPage", icon: "📚", label: "จัดการรายวิชา" },
       { id: "coordinatorsPage", icon: "👨‍🏫", label: "จัดการอาจารย์" }
     );
   }
 
-  menu.innerHTML = menuItems
+  menu.innerHTML = items
     .map(
       (item, idx) => `
       <div class="menu-item ${idx === 0 ? "active" : ""}" data-page="${item.id}">
-        <span class="menu-icon">${item.icon}</span>
+        <span class="menu-icon mr-2">${item.icon}</span>
         <span>${item.label}</span>
       </div>
     `
     )
     .join("");
 
-  menu.querySelectorAll(".menu-item").forEach((item) => {
-    item.addEventListener("click", () => {
+  menu.querySelectorAll(".menu-item").forEach((el) => {
+    el.addEventListener("click", () => {
       menu.querySelectorAll(".menu-item").forEach((m) => m.classList.remove("active"));
-      item.classList.add("active");
+      el.classList.add("active");
 
       document
         .querySelectorAll(".page-section")
-        .forEach((p) => p.classList.remove("active"));
-      const page = document.getElementById(item.dataset.page);
-      if (page) page.classList.add("active");
+        .forEach((p) => p.classList.add("hidden"));
+      const page = document.getElementById(el.dataset.page);
+      if (page) page.classList.remove("hidden");
     });
   });
 }
@@ -331,13 +357,24 @@ function renderSidebar() {
  ***********************/
 function renderStats() {
   const statsGrid = document.getElementById("statsGrid");
-  if (!statsGrid) return;
-
   const yearSelector = document.getElementById("yearSelector");
-  const selectedYear = yearSelector ? yearSelector.value : "";
+  if (!statsGrid || !yearSelector) return;
+
+  const selectedYear = yearSelector.value;
+  if (!selectedYear) {
+    statsGrid.innerHTML = `
+      <div class="stat-card bg-white rounded-lg border p-3 text-xs col-span-4">
+        <div class="stat-header flex items-center justify-between mb-1">
+          <span class="stat-title font-semibold">ยังไม่มีข้อมูลปีการศึกษา</span>
+        </div>
+        <p class="text-gray-500">กรุณาบันทึกข้อมูลในชีต COURSES ก่อน</p>
+      </div>
+    `;
+    return;
+  }
 
   const courses = allData.filter(
-    (item) => item.type === "course" && item.academic_year === selectedYear
+    (item) => item.type === "course" && String(item.academic_year) === selectedYear
   );
 
   const totalByYear = {};
@@ -345,34 +382,34 @@ function renderStats() {
   const inProgressByYear = {};
   const notStartedByYear = {};
 
-  courses.forEach((course) => {
-    const year = course.year_level || "-";
-    totalByYear[year] = (totalByYear[year] || 0) + 1;
+  courses.forEach((c) => {
+    const yearLevel = c.year_level || "-";
+    totalByYear[yearLevel] = (totalByYear[yearLevel] || 0) + 1;
 
-    if (course.status_director) {
-      completedByYear[year] = (completedByYear[year] || 0) + 1;
-    } else if (course.status_academic || course.status_homeroom) {
-      inProgressByYear[year] = (inProgressByYear[year] || 0) + 1;
+    if (c.status_director) {
+      completedByYear[yearLevel] = (completedByYear[yearLevel] || 0) + 1;
+    } else if (c.status_academic || c.status_homeroom) {
+      inProgressByYear[yearLevel] = (inProgressByYear[yearLevel] || 0) + 1;
     } else {
-      notStartedByYear[year] = (notStartedByYear[year] || 0) + 1;
+      notStartedByYear[yearLevel] = (notStartedByYear[yearLevel] || 0) + 1;
     }
   });
 
   const sum = (obj) => Object.values(obj).reduce((a, b) => a + b, 0);
 
-  const statsHTML = `
+  statsGrid.innerHTML = `
     ${
       isAdmin
         ? `
-    <div class="stat-card">
-      <div class="stat-header">
-        <span class="stat-title">รายวิชาทั้งหมด</span>
+    <div class="stat-card bg-white rounded-lg border p-3 text-xs">
+      <div class="stat-header flex items-center justify-between mb-1">
+        <span class="stat-title font-semibold">รายวิชาทั้งหมด</span>
         <span class="stat-icon">📊</span>
       </div>
-      <div class="stat-value">${courses.length}</div>
-      <div class="stat-breakdown">
+      <div class="stat-value text-2xl font-bold">${courses.length}</div>
+      <div class="stat-breakdown mt-1 space-x-1">
         ${Object.entries(totalByYear)
-          .map(([year, count]) => `<span class="year-badge">ปี ${year}: ${count}</span>`)
+          .map(([y, count]) => `<span class="year-badge px-2 py-0.5 bg-slate-100 rounded-full">ปี ${y}: ${count}</span>`)
           .join("")}
       </div>
     </div>
@@ -380,139 +417,117 @@ function renderStats() {
         : ""
     }
 
-    <div class="stat-card">
-      <div class="stat-header">
-        <span class="stat-title">ส่งเสร็จสมบูรณ์</span>
+    <div class="stat-card bg-white rounded-lg border p-3 text-xs">
+      <div class="stat-header flex items-center justify-between mb-1">
+        <span class="stat-title font-semibold">ส่งเสร็จสมบูรณ์</span>
         <span class="stat-icon">✅</span>
       </div>
-      <div class="stat-value">${sum(completedByYear)}</div>
-      <div class="stat-breakdown">
+      <div class="stat-value text-2xl font-bold">${sum(completedByYear)}</div>
+      <div class="stat-breakdown mt-1 space-x-1">
         ${Object.entries(completedByYear)
-          .map(([year, count]) => `<span class="year-badge">ปี ${year}: ${count}</span>`)
+          .map(([y, count]) => `<span class="year-badge px-2 py-0.5 bg-green-50 rounded-full">ปี ${y}: ${count}</span>`)
           .join("")}
       </div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-header">
-        <span class="stat-title">อยู่ระหว่างดำเนินการ</span>
+    <div class="stat-card bg-white rounded-lg border p-3 text-xs">
+      <div class="stat-header flex items-center justify-between mb-1">
+        <span class="stat-title font-semibold">อยู่ระหว่างดำเนินการ</span>
         <span class="stat-icon">⏳</span>
       </div>
-      <div class="stat-value">${sum(inProgressByYear)}</div>
-      <div class="stat-breakdown">
+      <div class="stat-value text-2xl font-bold">${sum(inProgressByYear)}</div>
+      <div class="stat-breakdown mt-1 space-x-1">
         ${Object.entries(inProgressByYear)
-          .map(([year, count]) => `<span class="year-badge">ปี ${year}: ${count}</span>`)
+          .map(([y, count]) => `<span class="year-badge px-2 py-0.5 bg-yellow-50 rounded-full">ปี ${y}: ${count}</span>`)
           .join("")}
       </div>
     </div>
 
-    <div class="stat-card">
-      <div class="stat-header">
-        <span class="stat-title">ยังไม่ส่ง</span>
+    <div class="stat-card bg-white rounded-lg border p-3 text-xs">
+      <div class="stat-header flex items-center justify-between mb-1">
+        <span class="stat-title font-semibold">ยังไม่ส่ง</span>
         <span class="stat-icon">❌</span>
       </div>
-      <div class="stat-value">${sum(notStartedByYear)}</div>
-      <div class="stat-breakdown">
+      <div class="stat-value text-2xl font-bold">${sum(notStartedByYear)}</div>
+      <div class="stat-breakdown mt-1 space-x-1">
         ${Object.entries(notStartedByYear)
-          .map(([year, count]) => `<span class="year-badge">ปี ${year}: ${count}</span>`)
+          .map(([y, count]) => `<span class="year-badge px-2 py-0.5 bg-red-50 rounded-full">ปี ${y}: ${count}</span>`)
           .join("")}
       </div>
     </div>
   `;
-
-  statsGrid.innerHTML = statsHTML;
 }
 
 function renderCourseTable() {
   const yearSelector = document.getElementById("yearSelector");
-  const selectedYear = yearSelector ? yearSelector.value : "";
-
   const tbody = document.getElementById("courseTableBody");
-  if (!tbody) return;
+  if (!yearSelector || !tbody) return;
 
+  const selectedYear = yearSelector.value;
   const courses = allData.filter(
-    (item) => item.type === "course" && item.academic_year === selectedYear
+    (item) => item.type === "course" && String(item.academic_year) === selectedYear
   );
 
   const totalPages = Math.max(1, Math.ceil(courses.length / itemsPerPage));
   if (currentPage > totalPages) currentPage = totalPages;
 
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const paginatedCourses = courses.slice(startIndex, endIndex);
+  const start = (currentPage - 1) * itemsPerPage;
+  const end = start + itemsPerPage;
+  const pageItems = courses.slice(start, end);
 
-  tbody.innerHTML = paginatedCourses
-    .map((course) => {
+  tbody.innerHTML = pageItems
+    .map((c) => {
       const isOverdue =
-        course.due_date &&
-        course.status_director &&
-        new Date(course.status_director) > new Date(course.due_date);
+        c.due_date &&
+        c.status_director &&
+        new Date(c.status_director) > new Date(c.due_date);
 
       return `
-      <tr>
-        <td>${course.course_name || ""}</td>
-        <td>${course.coordinators || "-"}</td>
-        <td>${course.year_level || ""}</td>
-        <td>${course.room || ""}</td>
-        <td>${course.semester || ""}</td>
-        <td>
-          <div class="status-step">
+        <tr class="border-b">
+          <td class="px-2 py-1 text-xs">${c.course_name || ""}</td>
+          <td class="px-2 py-1 text-xs">${c.coordinators || "-"}</td>
+          <td class="px-2 py-1 text-center text-xs">${c.year_level || ""}</td>
+          <td class="px-2 py-1 text-center text-xs">${c.room || ""}</td>
+          <td class="px-2 py-1 text-center text-xs">${c.semester || ""}</td>
+          <td class="px-2 py-1 text-xs">
+            <div class="flex flex-col gap-0.5">
+              ${c.status_academic ? `<small>✓ งานวิชาการ: ${c.status_academic}</small>` : "<small>○ งานวิชาการ</small>"}
+              ${c.status_homeroom ? `<small>✓ อ.ประจำชั้น: ${c.status_homeroom}</small>` : "<small>○ อ.ประจำชั้น</small>"}
+              ${c.status_director ? `<small>✓ รองผอ.: ${c.status_director}</small>` : "<small>○ รองผอ.</small>"}
+              ${c.file_shared ? "<small>✓ Scan แล้ว</small>" : "<small>○ ยังไม่ Scan</small>"}
+            </div>
+          </td>
+          <td class="px-2 py-1 text-center text-xs">
             ${
-              course.status_academic
-                ? `<small>✓ งานวิชาการ: ${course.status_academic}</small>`
-                : "<small>○ งานวิชาการ</small>"
+              c.pdf_url
+                ? `<a href="${c.pdf_url}" target="_blank" rel="noopener noreferrer" class="text-indigo-600 underline">ดูไฟล์</a>`
+                : "-"
             }
+          </td>
+          <td class="px-2 py-1 text-center text-xs">
             ${
-              course.status_homeroom
-                ? `<small>✓ อ.ประจำชั้น: ${course.status_homeroom}</small>`
-                : "<small>○ อ.ประจำชั้น</small>"
+              isAdmin
+                ? `
+              <button class="action-btn text-xs text-blue-600" onclick="Swal.fire('แก้ไข','ส่วนแก้ไขจะเชื่อมต่อภายหลัง','info')">แก้ไข</button>
+              <button class="action-btn text-xs text-red-600" onclick="Swal.fire('ลบ','ส่วนลบจะเชื่อมต่อภายหลัง','info')">ลบ</button>
+            `
+                : "-"
             }
-            ${
-              course.status_director
-                ? `<small>✓ รองผอ.: ${course.status_director}</small>`
-                : "<small>○ รองผอ.</small>"
-            }
-            ${
-              course.file_shared
-                ? "<small>✓ Scan แล้ว</small>"
-                : "<small>○ ยังไม่ Scan</small>"
-            }
-          </div>
-        </td>
-        <td>
-          ${
-            course.pdf_url
-              ? `<a href="${course.pdf_url}" target="_blank" rel="noopener noreferrer" style="color:#667eea;">📄 ดูไฟล์</a>`
-              : "-"
-          }
-        </td>
-        ${
-          isAdmin
-            ? `
-        <td>
-          <button class="action-btn btn-edit" onclick="editCourse('${course.__backendId}')">✏️</button>
-          <button class="action-btn btn-delete" onclick="deleteCourse('${course.__backendId}')">🗑️</button>
-        </td>
-        `
-            : ""
-        }
-        <td>
-          <span class="status-badge ${
-            isOverdue ? "status-overdue" : "status-normal"
-          }">
-            ${isOverdue ? "เกินกำหนด" : "ปกติ"}
-          </span>
-        </td>
-      </tr>
-    `;
+          </td>
+          <td class="px-2 py-1 text-center text-xs">
+            <span class="px-2 py-0.5 rounded-full text-[10px] ${
+              isOverdue ? "bg-red-100 text-red-700" : "bg-green-100 text-green-700"
+            }">
+              ${isOverdue ? "เกินกำหนด" : "ปกติ"}
+            </span>
+          </td>
+        </tr>
+      `;
     })
     .join("");
 
   const actionHeader = document.getElementById("actionHeader");
   if (actionHeader) actionHeader.style.display = isAdmin ? "table-cell" : "none";
-
-  const addBtn = document.getElementById("addCourseBtn");
-  if (addBtn) addBtn.style.display = isAdmin ? "block" : "none";
 
   renderPagination(totalPages);
 }
@@ -530,7 +545,7 @@ function renderPagination(totalPages) {
     <button onclick="goToPage(${currentPage - 1})" ${
     currentPage === 1 ? "disabled" : ""
   }>&lt; ก่อนหน้า</button>
-    <span class="page-info">หน้า ${currentPage} / ${totalPages}</span>
+    <span class="page-info px-2">หน้า ${currentPage} / ${totalPages}</span>
     <button onclick="goToPage(${currentPage + 1})" ${
     currentPage >= totalPages ? "disabled" : ""
   }>ถัดไป &gt;</button>
@@ -550,25 +565,91 @@ function goToPage(page) {
 }
 
 /***********************
- * ADMIN TABLES
- * (ส่วนนี้ผมไม่ได้แตะ logic เลย)
+ * ADMIN TABLES – placeholder
  ***********************/
-// ... ตรงนี้ปอยสามารถใช้เวอร์ชันเดิมของตาราง Users / Courses / Coordinators / Course_master
-// ถ้าตอนนี้ใช้งานได้แล้ว ก็ไม่จำเป็นต้องแก้
-// (เพื่อไม่ให้ข้อความยาวเกิน ผมไม่คัดลอกซ้ำทั้งหมดในคำตอบนี้)
-// หลัก ๆ คือ login ผ่านแล้ว ส่วนอื่นจะทำงานตาม dataSdk เหมือนเดิม
+function renderUsersTable() {
+  const tbody = document.getElementById("usersTableBody");
+  if (!tbody) return;
+  const users = allData.filter((item) => item.type === "user");
+  tbody.innerHTML = users
+    .map(
+      (u) => `
+      <tr class="border-b">
+        <td class="px-2 py-1 text-xs">${u.full_name || ""}</td>
+        <td class="px-2 py-1 text-xs">${u.email || ""}</td>
+        <td class="px-2 py-1 text-xs">${u.position || ""}</td>
+        <td class="px-2 py-1 text-center text-xs">
+          ${
+            u.active === true ||
+            u.active === "TRUE" ||
+            u.active === "true" ||
+            u.active === 1 ||
+            u.active === "1"
+              ? '<span class="px-2 py-0.5 bg-green-100 text-green-700 rounded-full text-[10px]">ใช้งาน</span>'
+              : '<span class="px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full text-[10px]">ปิดใช้งาน</span>'
+          }
+        </td>
+        <td class="px-2 py-1 text-center text-xs">
+          <button class="text-blue-600 text-xs" onclick="Swal.fire('แก้ไขผู้ใช้','จะเชื่อมต่อภายหลัง','info')">แก้ไข</button>
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+}
+
+function renderCoursesTable() {
+  const tbody = document.getElementById("coursesTableBody");
+  if (!tbody) return;
+  const masters = allData.filter((item) => item.type === "course_master");
+  tbody.innerHTML = masters
+    .map(
+      (c) => `
+      <tr class="border-b">
+        <td class="px-2 py-1 text-xs">${c.course_name || ""}</td>
+        <td class="px-2 py-1 text-xs">${c.coordinators || ""}</td>
+        <td class="px-2 py-1 text-center text-xs">${c.year_level || ""}</td>
+        <td class="px-2 py-1 text-center text-xs">${c.room || ""}</td>
+        <td class="px-2 py-1 text-center text-xs">${c.semester || ""}</td>
+        <td class="px-2 py-1 text-center text-xs">${c.due_date || ""}</td>
+        <td class="px-2 py-1 text-center text-xs">
+          <button class="text-blue-600 text-xs" onclick="Swal.fire('แก้ไขรายวิชา','จะเชื่อมต่อภายหลัง','info')">แก้ไข</button>
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+}
+
+function renderCoordinatorsTable() {
+  const tbody = document.getElementById("coordinatorsTableBody");
+  if (!tbody) return;
+  const coords = allData.filter((item) => item.type === "coordinator");
+  tbody.innerHTML = coords
+    .map(
+      (c) => `
+      <tr class="border-b">
+        <td class="px-2 py-1 text-xs">${c.coordinator_name || ""}</td>
+        <td class="px-2 py-1 text-center text-xs">
+          <button class="text-blue-600 text-xs" onclick="Swal.fire('แก้ไขอาจารย์','จะเชื่อมต่อภายหลัง','info')">แก้ไข</button>
+        </td>
+      </tr>
+    `
+    )
+    .join("");
+}
 
 /***********************
- * MODAL HELPERS (close)
+ * MODAL HELPERS
  ***********************/
 function closeModal() {
   const modal = document.getElementById("modal");
-  if (modal) modal.classList.remove("active");
+  if (modal) modal.classList.add("hidden");
 }
 
 window.onclick = function (event) {
   const modal = document.getElementById("modal");
-  if (event.target === modal) {
+  if (modal && event.target === modal) {
     closeModal();
   }
 };
