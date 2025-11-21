@@ -192,36 +192,6 @@ async function handleLogin(e) {
   }
 }
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
-
-  const users = allData.filter(item => item.type === 'user');
-  const user = users.find(u => u.email === email && u.password === password && u.active);
-
-  if (user) {
-    currentUser = user;
-    isAdmin = user.position === 'ผู้ดูแลระบบ';
-
-    Swal.fire({
-      icon: 'success',
-      title: 'เข้าสู่ระบบสำเร็จ',
-      text: `ยินดีต้อนรับ ${user.full_name}`,
-      timer: 1500,
-      showConfirmButton: false
-    });
-
-    setTimeout(() => {
-      document.getElementById('loginContainer').style.display = 'none';
-      document.getElementById('dashboard').classList.add('active');
-      renderDashboard();
-    }, 1500);
-  } else {
-    Swal.fire({
-      icon: 'error',
-      title: 'เข้าสู่ระบบไม่สำเร็จ',
-      text: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
-    });
-  }
-
 function handleGuestLogin() {
   currentUser = { full_name: 'ผู้ใช้งานทั่วไป', position: 'ผู้ใช้งาน' };
   isAdmin = false;
