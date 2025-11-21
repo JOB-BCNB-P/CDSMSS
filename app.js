@@ -1,6 +1,6 @@
 
 /* ===== Config: Google Apps Script Web App endpoint ===== */
-window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/macros/s/AKfycbzPq1Bkg1-OTK1mnoWNgO1jRu8OZ-0FFYYL7iRQWmPYZH5EE0o-k6PBFK8xVArm_mBvZA/exec";
+window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/macros/s/AKfycbz9WJdCDKyqe1YQKMgJVUctvU9L1rI9CjIFay5S6nlV81WcztU1jJx1Nt75AbG8F4XjTw/exec";
 
 /* ===== dataSdk (fetch mode for GitHub Pages) ===== */
 (function () {
