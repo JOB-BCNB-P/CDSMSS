@@ -21,7 +21,7 @@ window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/
   async function postJSON(action, payload) {
     const res = await fetch(window.__GAS_ENDPOINT__, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      headers: { "Accept": "application/json" },
       body: JSON.stringify({ action, data: payload })
     });
     return res.json();
