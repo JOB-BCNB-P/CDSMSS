@@ -2,7 +2,6 @@
 /* ===== Config: Google Apps Script Web App endpoint ===== */
 window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/macros/s/AKfycbz9WJdCDKyqe1YQKMgJVUctvU9L1rI9CjIFay5S6nlV81WcztU1jJx1Nt75AbG8F4XjTw/exec";
 
-
 /* ===== dataSdk (fetch mode for GitHub Pages) ===== */
 (function () {
   if (window.dataSdk && window.dataSdk.__wired) return;
@@ -22,8 +21,7 @@ window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/
   async function postJSON(action, payload) {
     const res = await fetch(window.__GAS_ENDPOINT__, {
       method: "POST",
-      // ใช้ header แบบ "simple request" เพื่อไม่ให้เบราว์เซอร์ส่ง preflight OPTIONS
-      headers: { "Accept": "application/json" },
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
       body: JSON.stringify({ action, data: payload })
     });
     return res.json();
@@ -72,7 +70,9 @@ const dataHandler = {
   onDataChanged(data) {
     allData = data;
     dataReady = true;
-    if (currentUser) renderDashboard();
+    if (currentUser) {
+      renderDashboard();
+    }
   }
 };
 
@@ -140,7 +140,7 @@ function setupEventListeners() {
 async function handleLogin(e) {
   e.preventDefault();
 
-  // ถ้าข้อมูลจาก Google Sheets/CSV ยังโหลดไม่เสร็จ ให้แจ้งเตือนและไม่ให้ล็อกอินก่อน
+  // ถ้าข้อมูลจาก Google Sheets/CSV ยังโหลดไม่เสร็จ ให้แจ้งเตือนก่อน
   if (!dataReady) {
     Swal.fire({
       icon: 'info',
@@ -193,6 +193,38 @@ async function handleLogin(e) {
     });
   }
 }
+
+
+  await new Promise(resolve => setTimeout(resolve, 1000));
+
+  const users = allData.filter(item => item.type === 'user');
+  const user = users.find(u => u.email === email && u.password === password && u.active);
+
+  if (user) {
+    currentUser = user;
+    isAdmin = user.position === 'ผู้ดูแลระบบ';
+
+    Swal.fire({
+      icon: 'success',
+      title: 'เข้าสู่ระบบสำเร็จ',
+      text: `ยินดีต้อนรับ ${user.full_name}`,
+      timer: 1500,
+      showConfirmButton: false
+    });
+
+    setTimeout(() => {
+      document.getElementById('loginContainer').style.display = 'none';
+      document.getElementById('dashboard').classList.add('active');
+      renderDashboard();
+    }, 1500);
+  } else {
+    Swal.fire({
+      icon: 'error',
+      title: 'เข้าสู่ระบบไม่สำเร็จ',
+      text: 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
+    });
+  }
+
 
 function handleGuestLogin() {
   currentUser = { full_name: 'ผู้ใช้งานทั่วไป', position: 'ผู้ใช้งาน' };
