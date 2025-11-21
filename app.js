@@ -6,20 +6,14 @@ window.__GAS_ENDPOINT__ = "https://script.google.com/macros/s/AKfycbz9WJdCDKyqe1
   if (window.dataSdk && window.dataSdk.__wired) return;
 
   async function refresh(handler) {
-    const res = await fetch(`${window.__GAS_ENDPOINT__}?action=getAllData`, {
-      method: "GET",
-      mode: "cors",
-      headers: {
-        "Accept": "application/json",
-      },
-      credentials: "same-origin"
-    });
+    // simple GET – ไม่ใส่ options จะไม่มี preflight
+    const res = await fetch(`${window.__GAS_ENDPOINT__}?action=getAllData`);
     const data = await res.json();
+
     if (handler && typeof handler.onDataChanged === "function") {
       handler.onDataChanged(Array.isArray(data) ? data : []);
     }
   }
-
 
   window.dataSdk = {
     __wired: true,
