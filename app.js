@@ -11,7 +11,6 @@ window.__GAS_ENDPOINT__ = "https://script.google.com/macros/s/AKfycbz9WJdCDKyqe1
       mode: "cors",
       headers: {
         "Accept": "application/json",
-        "Content-Type": "application/json"
       },
       credentials: "same-origin"
     });
