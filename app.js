@@ -161,8 +161,8 @@ async function handleLogin(e) {
 
   const users = allData.filter(item => item.type === 'user');
   const user = users.find(u =>
-    u.email?.trim().toLowerCase() === email.trim().toLowerCase() &&
-    u.password?.trim() === password.trim() &&
+    String(u.email ?? '').trim().toLowerCase() === email.trim().toLowerCase() &&
+    String(u.password ?? '').trim() === password.trim() &&
     String(u.active).toLowerCase() === 'true'
   );
 
