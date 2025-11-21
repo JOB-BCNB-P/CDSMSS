@@ -2,6 +2,7 @@
 /* ===== Config: Google Apps Script Web App endpoint ===== */
 window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/macros/s/AKfycbz9WJdCDKyqe1YQKMgJVUctvU9L1rI9CjIFay5S6nlV81WcztU1jJx1Nt75AbG8F4XjTw/exec";
 
+
 /* ===== dataSdk (fetch mode for GitHub Pages) ===== */
 (function () {
   if (window.dataSdk && window.dataSdk.__wired) return;
@@ -21,7 +22,8 @@ window.__GAS_ENDPOINT__ = window.__GAS_ENDPOINT__ || "https://script.google.com/
   async function postJSON(action, payload) {
     const res = await fetch(window.__GAS_ENDPOINT__, {
       method: "POST",
-      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      // ใช้ header แบบ "simple request" เพื่อไม่ให้เบราว์เซอร์ส่ง preflight OPTIONS
+      headers: { "Accept": "application/json" },
       body: JSON.stringify({ action, data: payload })
     });
     return res.json();
