@@ -114,7 +114,12 @@ async function handleLogin(e) {
   await new Promise(resolve => setTimeout(resolve, 1000));
 
   const users = allData.filter(d => d.type === 'user');
-  const user  = users.find(u => u.email === email && u.password === password && String(u.active) === 'true');
+  const user = users.find(
+  u =>
+    u.email === email &&
+    u.password === password &&
+    String(u.active).toLowerCase() === 'true'
+  );
 
   if (user) {
     currentUser = user;
@@ -965,3 +970,4 @@ document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
 // run init
 init();
+
