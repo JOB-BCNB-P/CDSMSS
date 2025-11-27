@@ -1,68 +1,49 @@
 // === URL Web App ของ Google Apps Script ===
 const API_URL = 'https://script.google.com/macros/s/AKfycbyNkg3e-K1rEBX67YtwYTZynNJb9NDYAQEOwhzhrdSynkkDkeJr6L7mV7fQx_CKoDPc/exec';
-// === dataSdk: เลียนแบบของเดิม แต่ไปเรียก Apps Script แทน ===
+// === dataSdk: เรียก Apps Script ผ่าน google.script.run ===
 window.dataSdk = {
-  async init(handler) {
-    try {
-      const res = await fetch(`${API_URL}?action=getAll`);
-      const json = await res.json();
-      if (json.isOk) {
-        handler.onDataChanged(json.data || []);
-        return { isOk: true };
-      } else {
-        console.error(json.error);
+  init(handler) {
+    google.script.run
+      .withSuccessHandler(res => {
+        if (res && res.isOk) {
+          handler.onDataChanged(res.data || []);
+        } else {
+          console.error(res ? res.error : 'unknown error');
+          handler.onDataChanged([]);
+        }
+      })
+      .withFailureHandler(err => {
+        console.error(err);
         handler.onDataChanged([]);
-        return { isOk: false, error: json.error };
-      }
-    } catch (err) {
-      console.error(err);
-      handler.onDataChanged([]);
-      return { isOk: false, error: err.toString() };
-    }
+      })
+      .getAll();
   },
 
-  async create(obj) {
-    const params = new URLSearchParams();
-    params.append('action', 'create');
-    params.append('entity', obj.type);  // user, course, teacher
-    params.append('payload', JSON.stringify(obj));
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: params
+  create(obj) {
+    return new Promise(resolve => {
+      google.script.run
+        .withSuccessHandler(res => resolve(res))
+        .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
+        .createItem(obj);
     });
-    const json = await res.json();
-
-    if (json.isOk && json.record) {
-      Object.assign(obj, json.record); // เอา __backendId กลับมาเก็บไว้
-    }
-    return json;
   },
 
-  async update(obj) {
-    const params = new URLSearchParams();
-    params.append('action', 'update');
-    params.append('entity', obj.type);
-    params.append('payload', JSON.stringify(obj));
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: params
+  update(obj) {
+    return new Promise(resolve => {
+      google.script.run
+        .withSuccessHandler(res => resolve(res))
+        .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
+        .updateItem(obj);
     });
-    return res.json();
   },
 
-  async delete(obj) {
-    const params = new URLSearchParams();
-    params.append('action', 'delete');
-    params.append('entity', obj.type);
-    params.append('payload', JSON.stringify({ __backendId: obj.__backendId }));
-
-    const res = await fetch(API_URL, {
-      method: 'POST',
-      body: params
+  delete(obj) {
+    return new Promise(resolve => {
+      google.script.run
+        .withSuccessHandler(res => resolve(res))
+        .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
+        .deleteItem(obj);
     });
-    return res.json();
   }
 };
 
@@ -88,14 +69,10 @@ const dataHandler = {
 
 // === Init เริ่มต้น ===
 async function init() {
-  // set ชื่อระบบ/สถานศึกษา
   document.getElementById('systemTitle').textContent = defaultConfig.system_title;
   document.getElementById('institutionName').textContent = defaultConfig.institution_name;
 
-  const initResult = await window.dataSdk.init(dataHandler);
-  if (!initResult.isOk) {
-    console.error("Failed to initialize data SDK");
-  }
+  window.dataSdk.init(dataHandler);
 }
 
 // === Login / Logout ===
@@ -110,11 +87,10 @@ async function handleLogin(e) {
     didOpen: () => Swal.showLoading()
   });
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  await new Promise(resolve => setTimeout(resolve, 500));
 
   const users = allData.filter(d => d.type === 'user');
-  const user = users.find(
-  u =>
+  const user  = users.find(u =>
     u.email === email &&
     u.password === password &&
     String(u.active).toLowerCase() === 'true'
@@ -429,8 +405,7 @@ async function updateStatus(courseId, statusType, checked) {
 
   if (result.isOk) {
     Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
-    // reload data
-    await window.dataSdk.init(dataHandler);
+    window.dataSdk.init(dataHandler);
   } else {
     Swal.fire({ icon: 'error', title: 'เกิดข้อผิดพลาด', text: 'ไม่สามารถบันทึกข้อมูลได้' });
   }
@@ -450,11 +425,11 @@ async function updateScanned(courseId, checked) {
 
   if (result.isOk) {
     Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
-    await window.dataSdk.init(dataHandler);
+    window.dataSdk.init(dataHandler);
   }
 }
 
-// Upload PDF (ตัวอย่าง แสดงข้อความเฉย ๆ)
+// Upload PDF (ตอนนี้แค่แจ้งเตือน ยังไม่เชื่อม Drive)
 function uploadPDF(courseId, file) {
   if (!file) return;
 
@@ -476,11 +451,11 @@ function renderUsersTable() {
       <td>${user.email || ''}</td>
       <td>${user.full_name || ''}</td>
       <td>${user.position === 'admin' ? 'ผู้ดูแลระบบ' : 'ผู้ใช้งาน'}</td>
-      <td>${String(user.active) === 'true' ? '✅ ใช้งาน' : '❌ ปิดการใช้งาน'}</td>
+      <td>${String(user.active).toLowerCase() === 'true' ? '✅ ใช้งาน' : '❌ ปิดการใช้งาน'}</td>
       <td>
         <button class="btn-icon" onclick="editUser('${user.__backendId}')">✏️</button>
         <button class="btn-icon" onclick="toggleUserActive('${user.__backendId}')">
-          ${String(user.active) === 'true' ? '🔒' : '🔓'}
+          ${String(user.active).toLowerCase() === 'true' ? '🔒' : '🔓'}
         </button>
         <button class="btn-icon" onclick="resetPassword('${user.__backendId}')">🔑</button>
       </td>
@@ -606,7 +581,7 @@ async function saveUser(userId = null) {
   if (result.isOk) {
     Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
     closeModal();
-    await window.dataSdk.init(dataHandler);
+    window.dataSdk.init(dataHandler);
   } else {
     Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
   }
@@ -650,11 +625,14 @@ async function toggleUserActive(userId) {
     didOpen: () => Swal.showLoading()
   });
 
-  const result = await window.dataSdk.update({ ...user, active: !(String(user.active) === 'true') });
+  const result = await window.dataSdk.update({
+    ...user,
+    active: !(String(user.active).toLowerCase() === 'true')
+  });
 
   if (result.isOk) {
     Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
-    await window.dataSdk.init(dataHandler);
+    window.dataSdk.init(dataHandler);
   }
 }
 
@@ -684,7 +662,7 @@ async function resetPassword(userId) {
 
     if (updateResult.isOk) {
       Swal.fire({ icon: 'success', title: 'รีเซ็ตรหัสผ่านสำเร็จ', timer: 1500, showConfirmButton: false });
-      await window.dataSdk.init(dataHandler);
+      window.dataSdk.init(dataHandler);
     }
   }
 }
@@ -786,7 +764,7 @@ async function saveCourse(courseId = null) {
   if (result.isOk) {
     Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
     closeModal();
-    await window.dataSdk.init(dataHandler);
+    window.dataSdk.init(dataHandler);
   } else {
     Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
   }
@@ -868,7 +846,7 @@ async function deleteCourse(courseId) {
 
     if (delResult.isOk) {
       Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500, showConfirmButton: false });
-      await window.dataSdk.init(dataHandler);
+      window.dataSdk.init(dataHandler);
     }
   }
 }
@@ -915,7 +893,7 @@ async function saveTeacher(teacherId = null) {
   if (result.isOk) {
     Swal.fire({ icon: 'success', title: 'บันทึกสำเร็จ', timer: 1500, showConfirmButton: false });
     closeModal();
-    await window.dataSdk.init(dataHandler);
+    window.dataSdk.init(dataHandler);
   } else {
     Swal.fire('เกิดข้อผิดพลาด', 'ไม่สามารถบันทึกข้อมูลได้', 'error');
   }
@@ -959,7 +937,7 @@ async function deleteTeacher(teacherId) {
 
     if (delResult.isOk) {
       Swal.fire({ icon: 'success', title: 'ลบสำเร็จ', timer: 1500, showConfirmButton: false });
-      await window.dataSdk.init(dataHandler);
+      window.dataSdk.init(dataHandler);
     }
   }
 }
@@ -967,7 +945,5 @@ async function deleteTeacher(teacherId) {
 // === Event listeners เริ่มต้น ===
 document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
-// run init
-init();
-
-
+// run init เมื่อโหลดหน้าเสร็จ
+window.addEventListener('load', init);
