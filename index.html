@@ -1,148 +1,153 @@
 <!doctype html>
 <html lang="th">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</title>
+  <head>
+    <meta charset="UTF-8">
+    <title>ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-  <!-- SweetAlert2 -->
-  <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
-  <!-- CSS แยกไฟล์ -->
-  <link rel="stylesheet" href="styles.css">
-</head>
-<body>
-  <!-- หน้าล็อกอิน -->
-  <div id="loginContainer" class="login-container">
-    <div class="login-box">
-      <div class="login-header">
-        <h1 id="systemTitle">ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</h1>
-        <p id="institutionName">โรงเรียน/มหาวิทยาลัย</p>
-      </div>
-      <form id="loginForm">
-        <div class="form-group">
-          <label for="email">อีเมล</label>
-          <input type="email" id="email" required placeholder="กรอกอีเมล">
+    <!-- CSS จากไฟล์ Styles.html -->
+    <style>
+      <?!= include('Styles'); ?>
+    </style>
+  </head>
+  <body>
+    <!-- หน้าล็อกอิน -->
+    <div id="loginContainer" class="login-container">
+      <div class="login-box">
+        <div class="login-header">
+          <h1 id="systemTitle">ระบบกำกับติดตามการส่งรายละเอียดรายวิชา</h1>
+          <p id="institutionName">โรงเรียน/มหาวิทยาลัย</p>
         </div>
-        <div class="form-group">
-          <label for="password">รหัสผ่าน</label>
-          <input type="password" id="password" required placeholder="กรอกรหัสผ่าน">
+        <form id="loginForm">
+          <div class="form-group">
+            <label for="email">อีเมล</label>
+            <input type="email" id="email" required placeholder="กรอกอีเมล">
+          </div>
+          <div class="form-group">
+            <label for="password">รหัสผ่าน</label>
+            <input type="password" id="password" required placeholder="กรอกรหัสผ่าน">
+          </div>
+          <button type="submit" class="btn-primary">เข้าสู่ระบบ</button>
+        </form>
+        <div class="guest-link" onclick="loginAsGuest()">
+          เข้าชมในฐานะผู้ใช้งานทั่วไป
         </div>
-        <button type="submit" class="btn-primary">เข้าสู่ระบบ</button>
-      </form>
-      <div class="guest-link" onclick="loginAsGuest()">
-        เข้าชมในฐานะผู้ใช้งานทั่วไป
       </div>
     </div>
-  </div>
 
-  <!-- Dashboard -->
-  <div id="dashboard" class="dashboard">
-    <div id="sidebar" class="sidebar">
-      <div class="sidebar-header">
-        <h2>เมนู</h2>
-        <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
-      </div>
-      <div class="sidebar-menu" id="sidebarMenu"></div>
-    </div>
-
-    <div class="main-content">
-      <div class="top-bar">
-        <div class="user-info">
-          <div class="user-avatar" id="userAvatar">A</div>
-          <div class="user-details">
-            <h3 id="userName">ผู้ใช้งาน</h3>
-            <p id="userPosition">ตำแหน่ง</p>
-          </div>
+    <!-- Dashboard -->
+    <div id="dashboard" class="dashboard">
+      <div id="sidebar" class="sidebar">
+        <div class="sidebar-header">
+          <h2>เมนู</h2>
+          <button class="toggle-btn" onclick="toggleSidebar()">☰</button>
         </div>
-        <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
+        <div class="sidebar-menu" id="sidebarMenu"></div>
       </div>
 
-      <div class="content-area">
-        <!-- หน้า Home -->
-        <div id="homePage" class="page-section active">
-          <div class="year-selector">
-            <label>ปีการศึกษา:</label>
-            <select id="yearFilter" onchange="filterByYear()">
-              <option value="2567">2567</option>
-              <option value="2568">2568</option>
-            </select>
+      <div class="main-content">
+        <div class="top-bar">
+          <div class="user-info">
+            <div class="user-avatar" id="userAvatar">A</div>
+            <div class="user-details">
+              <h3 id="userName">ผู้ใช้งาน</h3>
+              <p id="userPosition">ตำแหน่ง</p>
+            </div>
           </div>
-
-          <div class="stats-grid" id="statsGrid"></div>
-
-          <div class="table-container">
-            <h2 style="margin-bottom: 20px;">ตารางข้อมูลการส่งเอกสาร</h2>
-            <div id="homeTableContainer"></div>
-          </div>
+          <button class="btn-logout" onclick="logout()">ออกจากระบบ</button>
         </div>
 
-        <!-- หน้า จัดการผู้ใช้งาน -->
-        <div id="usersPage" class="page-section">
-          <button class="btn-add" onclick="showAddUserModal()">+ เพิ่มผู้ใช้งาน</button>
-          <div class="table-container">
-            <h2 style="margin-bottom: 20px;">จัดการผู้ใช้งาน</h2>
-            <table id="usersTable">
-              <thead>
-                <tr>
-                  <th>อีเมล</th>
-                  <th>ชื่อ-สกุล</th>
-                  <th>ตำแหน่ง</th>
-                  <th>สถานะ</th>
-                  <th>จัดการ</th>
-                </tr>
-              </thead>
-              <tbody id="usersTableBody"></tbody>
-            </table>
+        <div class="content-area">
+          <!-- หน้า Home -->
+          <div id="homePage" class="page-section active">
+            <div class="year-selector">
+              <label>ปีการศึกษา:</label>
+              <select id="yearFilter" onchange="filterByYear()">
+                <option value="2567">2567</option>
+                <option value="2568">2568</option>
+              </select>
+            </div>
+
+            <div class="stats-grid" id="statsGrid"></div>
+
+            <div class="table-container">
+              <h2 style="margin-bottom: 20px;">ตารางข้อมูลการส่งเอกสาร</h2>
+              <div id="homeTableContainer"></div>
+            </div>
           </div>
-        </div>
 
-        <!-- หน้า จัดการรายวิชา -->
-        <div id="coursesPage" class="page-section">
-          <button class="btn-add" onclick="showAddCourseModal()">+ เพิ่มรายวิชา</button>
-          <div class="table-container">
-            <h2 style="margin-bottom: 20px;">จัดการรายวิชา</h2>
-            <table id="coursesTable">
-              <thead>
-                <tr>
-                  <th>ชื่อรายวิชา</th>
-                  <th>อาจารย์ผู้ประสานงาน</th>
-                  <th>ชั้นปี</th>
-                  <th>ห้อง</th>
-                  <th>ภาคเรียน</th>
-                  <th>กำหนดส่ง</th>
-                  <th>จัดการ</th>
-                </tr>
-              </thead>
-              <tbody id="coursesTableBody"></tbody>
-            </table>
+          <!-- หน้า จัดการผู้ใช้งาน -->
+          <div id="usersPage" class="page-section">
+            <button class="btn-add" onclick="showAddUserModal()">+ เพิ่มผู้ใช้งาน</button>
+            <div class="table-container">
+              <h2 style="margin-bottom: 20px;">จัดการผู้ใช้งาน</h2>
+              <table id="usersTable">
+                <thead>
+                  <tr>
+                    <th>อีเมล</th>
+                    <th>ชื่อ-สกุล</th>
+                    <th>ตำแหน่ง</th>
+                    <th>สถานะ</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="usersTableBody"></tbody>
+              </table>
+            </div>
           </div>
-        </div>
 
-        <!-- หน้า จัดการอาจารย์ -->
-        <div id="teachersPage" class="page-section">
-          <button class="btn-add" onclick="showAddTeacherModal()">+ เพิ่มอาจารย์</button>
-          <div class="table-container">
-            <h2 style="margin-bottom: 20px;">จัดการรายชื่ออาจารย์ผู้ประสานงานรายวิชา</h2>
-            <table id="teachersTable">
-              <thead>
-                <tr>
-                  <th>ชื่อ-สกุล</th>
-                  <th>จัดการ</th>
-                </tr>
-              </thead>
-              <tbody id="teachersTableBody"></tbody>
-            </table>
+          <!-- หน้า จัดการรายวิชา -->
+          <div id="coursesPage" class="page-section">
+            <button class="btn-add" onclick="showAddCourseModal()">+ เพิ่มรายวิชา</button>
+            <div class="table-container">
+              <h2 style="margin-bottom: 20px;">จัดการรายวิชา</h2>
+              <table id="coursesTable">
+                <thead>
+                  <tr>
+                    <th>ชื่อรายวิชา</th>
+                    <th>อาจารย์ผู้ประสานงาน</th>
+                    <th>ชั้นปี</th>
+                    <th>ห้อง</th>
+                    <th>ภาคเรียน</th>
+                    <th>กำหนดส่ง</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="coursesTableBody"></tbody>
+              </table>
+            </div>
           </div>
-        </div>
-      </div> <!-- /content-area -->
-    </div>   <!-- /main-content -->
-  </div>     <!-- /dashboard -->
 
-  <!-- Modal -->
-  <div id="modalContainer" class="modal"></div>
+          <!-- หน้า จัดการอาจารย์ -->
+          <div id="teachersPage" class="page-section">
+            <button class="btn-add" onclick="showAddTeacherModal()">+ เพิ่มอาจารย์</button>
+            <div class="table-container">
+              <h2 style="margin-bottom: 20px;">จัดการรายชื่ออาจารย์ผู้ประสานงานรายวิชา</h2>
+              <table id="teachersTable">
+                <thead>
+                  <tr>
+                    <th>ชื่อ-สกุล</th>
+                    <th>จัดการ</th>
+                  </tr>
+                </thead>
+                <tbody id="teachersTableBody"></tbody>
+              </table>
+            </div>
+          </div>
 
-  <!-- JS แยกไฟล์ -->
-  <script src="app.js"></script>
-</body>
+        </div><!-- /content-area -->
+      </div><!-- /main-content -->
+    </div><!-- /dashboard -->
+
+    <!-- Modal -->
+    <div id="modalContainer" class="modal"></div>
+
+    <!-- JS จากไฟล์ App.html -->
+    <script>
+      <?!= include('App'); ?>
+    </script>
+  </body>
 </html>
