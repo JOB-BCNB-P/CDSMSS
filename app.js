@@ -1,6 +1,5 @@
 // === URL Web App ของ Google Apps Script ===
 const API_URL = 'https://script.google.com/macros/s/AKfycbyNkg3e-K1rEBX67YtwYTZynNJb9NDYAQEOwhzhrdSynkkDkeJr6L7mV7fQx_CKoDPc/exec';
-
 // === dataSdk: เลียนแบบของเดิม แต่ไปเรียก Apps Script แทน ===
 window.dataSdk = {
   async init(handler) {
@@ -970,4 +969,5 @@ document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
 // run init
 init();
+
 
