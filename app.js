@@ -1,51 +1,108 @@
 // === URL Web App ของ Google Apps Script ===
 const API_URL = 'https://script.google.com/macros/s/AKfycbyNkg3e-K1rEBX67YtwYTZynNJb9NDYAQEOwhzhrdSynkkDkeJr6L7mV7fQx_CKoDPc/exec';
-// === dataSdk: เรียก Apps Script ผ่าน google.script.run ===
+
+// ตรวจสอบว่าอยู่ในสภาพแวดล้อม Google Apps Script หรือไม่
+const HAS_GOOGLE_SCRIPT_RUN =
+  typeof google !== 'undefined' &&
+  google.script &&
+  google.script.run;
+
+// === dataSdk: เรียก Apps Script ผ่าน google.script.run หรือผ่าน Web API (fetch) ===
 window.dataSdk = {
   init(handler) {
-    google.script.run
-      .withSuccessHandler(res => {
-        if (res && res.isOk) {
-          handler.onDataChanged(res.data || []);
-        } else {
-          console.error(res ? res.error : 'unknown error');
+    if (HAS_GOOGLE_SCRIPT_RUN) {
+      // กรณีรันผ่าน HtmlService (Web App) ใน Apps Script
+      google.script.run
+        .withSuccessHandler(res => {
+          if (res && res.isOk) {
+            handler.onDataChanged(res.data || []);
+          } else {
+            console.error(res ? res.error : 'unknown error');
+            handler.onDataChanged([]);
+          }
+        })
+        .withFailureHandler(err => {
+          console.error(err);
           handler.onDataChanged([]);
-        }
-      })
-      .withFailureHandler(err => {
-        console.error(err);
-        handler.onDataChanged([]);
-      })
-      .getAll();
+        })
+        .getAll();
+    } else {
+      // กรณีรันจากเว็บภายนอก (เช่น GitHub Pages) ให้เรียกผ่าน API_URL แทน
+      fetch(API_URL + '?action=getAll')
+        .then(r => r.json())
+        .then(res => {
+          if (res && res.isOk) {
+            handler.onDataChanged(res.data || []);
+          } else {
+            console.error(res ? res.error : 'unknown error');
+            handler.onDataChanged([]);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          handler.onDataChanged([]);
+        });
+    }
   },
 
   create(obj) {
-    return new Promise(resolve => {
-      google.script.run
-        .withSuccessHandler(res => resolve(res))
-        .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
-        .createItem(obj);
-    });
+    if (HAS_GOOGLE_SCRIPT_RUN) {
+      return new Promise(resolve => {
+        google.script.run
+          .withSuccessHandler(res => resolve(res))
+          .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
+          .createItem(obj);
+      });
+    } else {
+      return fetch(API_URL + '?action=create', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(obj || {})
+      })
+        .then(r => r.json())
+        .catch(err => ({ isOk: false, error: String(err) }));
+    }
   },
 
   update(obj) {
-    return new Promise(resolve => {
-      google.script.run
-        .withSuccessHandler(res => resolve(res))
-        .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
-        .updateItem(obj);
-    });
+    if (HAS_GOOGLE_SCRIPT_RUN) {
+      return new Promise(resolve => {
+        google.script.run
+          .withSuccessHandler(res => resolve(res))
+          .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
+          .updateItem(obj);
+      });
+    } else {
+      return fetch(API_URL + '?action=update', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(obj || {})
+      })
+        .then(r => r.json())
+        .catch(err => ({ isOk: false, error: String(err) }));
+    }
   },
 
   delete(obj) {
-    return new Promise(resolve => {
-      google.script.run
-        .withSuccessHandler(res => resolve(res))
-        .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
-        .deleteItem(obj);
-    });
+    if (HAS_GOOGLE_SCRIPT_RUN) {
+      return new Promise(resolve => {
+        google.script.run
+          .withSuccessHandler(res => resolve(res))
+          .withFailureHandler(err => resolve({ isOk: false, error: String(err) }))
+          .deleteItem(obj);
+      });
+    } else {
+      return fetch(API_URL + '?action=delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(obj || {})
+      })
+        .then(r => r.json())
+        .catch(err => ({ isOk: false, error: String(err) }));
+    }
   }
 };
+
 
 // === ตัวแปรหลัก ===
 const defaultConfig = {
@@ -961,3 +1018,4 @@ document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
 // run init เมื่อโหลดหน้าเสร็จ
 window.addEventListener('load', init);
+
