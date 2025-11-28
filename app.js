@@ -1017,3 +1017,4 @@ document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
 // run init เมื่อโหลดหน้าเสร็จ
 window.addEventListener('load', init);
+
