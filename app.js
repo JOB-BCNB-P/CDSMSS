@@ -103,7 +103,6 @@ window.dataSdk = {
   }
 };
 
-
 // === ตัวแปรหลัก ===
 const defaultConfig = {
   system_title: "ระบบกำกับติดตามการส่งรายละเอียดรายวิชา",
@@ -1018,4 +1017,3 @@ document.getElementById('loginForm').addEventListener('submit', handleLogin);
 
 // run init เมื่อโหลดหน้าเสร็จ
 window.addEventListener('load', init);
-
